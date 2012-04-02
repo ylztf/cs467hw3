@@ -1,6 +1,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <fstream>
 
 using namespace std;
 //To catch the essense of PT algorithm, we assume the broadcast is done on one disk 
@@ -8,21 +9,32 @@ using namespace std;
 //Some items are repeated more than others.
 //Access probability of a data item may not be in sync with broadcast frequency of the item
 //(as is the case in the example in the slides)
-int main(){
+int main(int argc, char* argv[]){
     //only has one thing in cache.  Much simpler to code, but may need to be changed to make the program more dynamic.
     const int CACHE_LIMIT = 1;
+	
+	//input stream from file
+	ifstream in(argv[1]);
     
-    //very simple broadcast.  May need something more complex
-    string broadcast = "ABCABABCAB";
+    //read broadcast from input file
+    string broadcast;
+	in >> broadcast;
+	
+	cout << "The broadcast schedule is " << broadcast << endl << endl;
 
     //this is needed so string.find will not return -1 when it reached the end of the broadcast.
     string doubleLoop = broadcast + broadcast;
     //access probability for different data, using A, B, C as keys
     map<char, double> accessProb;
+	
+	//read in the pages and probabilities from the input file
+	char page;
+	double prob;
 
-    accessProb['A'] = 0.5;
-    accessProb['B'] = 0.25;
-    accessProb['C'] = 0.25;
+	do{
+		in >> page >> prob;
+		accessProb[page] = prob;
+	}while(!in.eof());
     
     //data item in cache
     char cached = '\0';
