@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string.h>
 #include <math.h>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -24,6 +26,26 @@ int lcm(int a, int b){
     return tmp? (a/tmp*b): 0;
 }
 
+int lcm(vector<int> v)
+{
+	switch(v.size())
+	{
+		case 1:
+			return v[0];
+			break;
+		case 2:
+			return lcm(v[0], v[1]);
+			break;
+		default:
+			int retme = lcm(v[0], v[1]);
+			for(int i = 2; i < v.size(); ++i)
+				retme = lcm(v[i], retme);
+				
+			return retme;
+			break;
+	}
+}
+
 void printChunk(vector<int>& a_disk, int start_index, int how_many){
     cout<<"[";
     
@@ -34,86 +56,84 @@ void printChunk(vector<int>& a_disk, int start_index, int how_many){
     cout<<"]";
 }
 
-int main(){
-    const int NUM_DISKS = 3;
+int main(int argc, char* argv[]){
+	//input stream from file
+	ifstream in(argv[1]);
+
+    int NUM_DISKS = 0;
 
     //structure to present raw data
-    map<int, string> items;
+    map<int, double> items;
     
-    const string ACCESS_PROB[NUM_DISKS] = {"1/4","1/32","1/120"};
+    //const string ACCESS_PROB[NUM_DISKS] = {"1/4","1/32","1/120"};
    
-    const double ACCESS_PROB_VALUE[NUM_DISKS] = {0.25, 0.03125, 0.008333333333};
+    vector<double> ACCESS_PROB_VALUE; // {0.25, 0.03125, 0.008333333333};
 
-    string diskName[3] = {"Disk A", "Disk B", "Disk C"};
-    //static input for raw data.  Be ideal if this is read from std input or a file.
-    items[0] = ACCESS_PROB[0];
-    items[1] = ACCESS_PROB[2];   
-    items[2] = ACCESS_PROB[2]; 
-    items[3] = ACCESS_PROB[2];
-    items[4] = ACCESS_PROB[1];   
-    items[5] = ACCESS_PROB[2];
-
-    items[6] = ACCESS_PROB[2];
-    items[7] = ACCESS_PROB[1];   
-    items[8] = ACCESS_PROB[2]; 
-    items[9] = ACCESS_PROB[2];
-    items[10] = ACCESS_PROB[2];   
-    items[11] = ACCESS_PROB[2]; 
-
- 
-    items[12] = ACCESS_PROB[2]; 
-    items[13] = ACCESS_PROB[2];
-    items[14] = ACCESS_PROB[1];   
-    items[15] = ACCESS_PROB[2];
-
-    items[16] = ACCESS_PROB[2];
-    items[17] = ACCESS_PROB[1];   
-    items[18] = ACCESS_PROB[2]; 
-    items[19] = ACCESS_PROB[2];
-    items[20] = ACCESS_PROB[2];   
-    items[21] = ACCESS_PROB[2]; 
-
-    items[22] = ACCESS_PROB[1]; 
-    items[23] = ACCESS_PROB[2];
-    items[24] = ACCESS_PROB[2];   
-    items[25] = ACCESS_PROB[1]; 
-
-    items[26] = ACCESS_PROB[2]; 
-    items[27] = ACCESS_PROB[1];
-    items[28] = ACCESS_PROB[2];   
-    items[29] = ACCESS_PROB[2]; 
-    items[30] = ACCESS_PROB[2]; 
-    items[31] = ACCESS_PROB[2];
-    items[32] = ACCESS_PROB[2];   
-    items[33] = ACCESS_PROB[1]; 
-    items[34] = ACCESS_PROB[2]; 
-    items[35] = ACCESS_PROB[2];
-    items[36] = ACCESS_PROB[0];   
-    items[37] = ACCESS_PROB[2]; 
-    items[38] = ACCESS_PROB[2]; 
-    items[39] = ACCESS_PROB[2];
+    vector<string> diskName; // {"Disk A", "Disk B", "Disk C"};
    
     //data structure for items to be stored in each disk    
     typedef vector<int> disk;
    
     //total items stored in respective disks
-    disk disks[NUM_DISKS];
+    vector<disk> disks;
    
     int countTotal=0;  //total number of data items
 
-    int count[NUM_DISKS]= {0, 0, 0}; //number of items in each disk
+    vector<int> count; // {0, 0, 0}; //number of items in each disk
 
     //broadcast frequencies for the different groups
-    int freq[NUM_DISKS] = {0,0,0};
+    vector<int> freq; // {0,0,0};
 
     //calculated max length of a chunk for output
     int max_chunks = 0;
 
     //divide each disk into appropriate number of chunks
-    int num_chunks[NUM_DISKS] = {0, 0, 0};
+    vector<int> num_chunks; // {0, 0, 0};
 
     //how many items are in a chunk for a particular disk
-    int itemsPerChunk[NUM_DISKS] = {0, 0, 0};
+    vector<int> itemsPerChunk; // {0, 0, 0};
+	
+	//read input from file
+	int page;
+	double prob;
+	
+	do{
+		in >> page >> prob;
+		
+		items[page] = prob;
+		countTotal++;
+		
+		//search for the probability to see if it is shared by other pages
+		bool found = false;
+		int i;
+		
+		for(i = 0; i < ACCESS_PROB_VALUE.size(); ++i)
+			if(ACCESS_PROB_VALUE[i] == prob)
+			{
+				found = true;
+				break;
+			}
+		
+		//if not found, add a new disk for the neww access probability
+		if(!found)
+		{
+			NUM_DISKS++;
+			ACCESS_PROB_VALUE.push_back(prob);
+			
+			disk tempDisk;
+			disks.push_back(tempDisk);
+
+			count.push_back(0);
+			freq.push_back(0);
+			num_chunks.push_back(0);
+			itemsPerChunk.push_back(0);
+			
+			//just some magic to convert an integer to a string
+			stringstream ss;
+			ss << i;
+			diskName.push_back("Disk_" + ss.str());
+		}
+	}while(!in.eof());
 
     // the kth chunk in a disk
     int k = 0;
@@ -121,9 +141,8 @@ int main(){
     //print out all items and their access probabilites
     cout<<"We have the following data items and their respective access probablilities."<<endl;
     cout<<"data item     "<<"     access probability"<<endl;
-    for (map<int, string>::iterator it=items.begin(); it!=items.end(); ++it){
+    for (map<int, double>::iterator it=items.begin(); it!=items.end(); ++it){
         cout<<(*it).first<<"                  "<<(*it).second<<endl;
-        countTotal++;
     }
     cout<<"There are "<<countTotal<<" data items in total."<<endl;
 
@@ -131,23 +150,17 @@ int main(){
     cout<<"We divide data items into different groups according to their access probabilities and assign them to different disks \n"<<endl;
 
     //this is not very smart as I use string compare.
-    for ( map<int, string>::iterator it=items.begin(); it!=items.end(); ++it){
-        int whichDisk=0;
-      
-        if((*it).second.compare(ACCESS_PROB[0]) == 0){
-                ;
-        }
-        else if((*it).second.compare(ACCESS_PROB[1])==0) { 
-            whichDisk++;
-        }
-        else if((*it).second.compare(ACCESS_PROB[2])==0){
-            whichDisk=whichDisk+2;;
-        }
-        disks[whichDisk].push_back((*it).first);
+    for ( map<int, double>::iterator it=items.begin(); it!=items.end(); ++it){
+		for(int m = 0; m < ACCESS_PROB_VALUE.size(); ++m)
+			if((*it).second == ACCESS_PROB_VALUE[m])
+			{
+				disks[m].push_back((*it).first);
+				break;
+			}
     }
     //print out the contents of the disks.
     for (int index = 0; index<NUM_DISKS; index++){
-        cout<<diskName[index]<<" is for items with access probability of "<<ACCESS_PROB[index]<<endl;
+        cout<<diskName[index]<<" is for items with access probability of "<<ACCESS_PROB_VALUE[index]<<endl;
         cout<<diskName[index]<<"  has the following items:"<<endl;
         for(int it=0; it<disks[index].size(); it++) {
             cout<<disks[index][it]<<endl;
@@ -157,33 +170,36 @@ int main(){
     }
 
     cout<<"Calculating frequencies..."<<endl;
-    //frequency calculation is not dynamic enough, hard coding array subscripts instead of using loops.  May leave this to Chris.  I need to move on
-    freq[0] = ceil( sqrt(ACCESS_PROB_VALUE[0]/ACCESS_PROB_VALUE[2]) );
-    freq[1] = ceil( sqrt(ACCESS_PROB_VALUE[1]/ACCESS_PROB_VALUE[2]) );
-    freq[2] = ceil( sqrt(ACCESS_PROB_VALUE[2]/ACCESS_PROB_VALUE[2]) );
+    //find the minimum access probabilities and calculate relative frequencies from it
+	int minimumIndex = 0;
+	for(int i = 0; i < NUM_DISKS; ++i)
+		if(ACCESS_PROB_VALUE[i] < ACCESS_PROB_VALUE[minimumIndex])
+			minimumIndex = i;
+	
+	cout<<"frequency_A / frequency_B = sqrt(access_probablility_A) / sqrt(access_probability_B)"<<endl;
+	
+	for(int i = 0; i < NUM_DISKS; ++i)
+	{
+		freq[i] = ceil( sqrt(ACCESS_PROB_VALUE[i]/ACCESS_PROB_VALUE[minimumIndex]) );
 
-    cout<<"frequency_A / frequency_B = sqrt(access_probablility_A) / sqrt(access_probability_B)"<<endl;
-    cout<<"frequency_A / frequency_B = sqrt("<<ACCESS_PROB[0]<<")/sqrt("<<ACCESS_PROB[1]<<")="<<sqrt(ACCESS_PROB_VALUE[0]/ACCESS_PROB_VALUE[1])
-        <<", which is rounded up to "<<ceil( sqrt(ACCESS_PROB_VALUE[0]/ACCESS_PROB_VALUE[1]) )<<"\n"<<endl;
+		cout<< diskName[i] << ": " << endl;
+		cout<<"relative frequency = sqrt("<<ACCESS_PROB_VALUE[i]<<")/sqrt("<<ACCESS_PROB_VALUE[minimumIndex]<<")="<<sqrt(ACCESS_PROB_VALUE[i]/ACCESS_PROB_VALUE[minimumIndex])
+			<<", which is rounded up to "<<ceil( sqrt(ACCESS_PROB_VALUE[i]/ACCESS_PROB_VALUE[minimumIndex]) )<<"\n"<<endl;
+	}
 
-    cout<<"frequency_A / frequency_C = sqrt(access_probablility_A) / sqrt(access_probability_C)"<<endl;
-    cout<<"frequency_A / frequency_C = sqrt("<<ACCESS_PROB[0]<<")/sqrt("<<ACCESS_PROB[2]<<")="<<sqrt(ACCESS_PROB_VALUE[0]/ACCESS_PROB_VALUE[2])
-        <<", which is rounded up to "<<ceil( sqrt(ACCESS_PROB_VALUE[0]/ACCESS_PROB_VALUE[2]) )<<"\n"<<endl;
-
-    cout<<"frequency of items in disk A is "<<freq[0]<<endl;
-    cout<<"frequency of items in disk B is "<<freq[1]<<endl;  
-    cout<<"frequency of items in disk B is "<<freq[2]<<"\n"<<endl;                                                
+	for(int i = 0; i < NUM_DISKS; ++i)
+		cout<<"frequency of items in " << diskName[i] << " is "<<freq[i]<<endl;
+	
     cout<<"max_chunks is the least common multiple of the frequencies: "<<endl;
-    max_chunks = lcm(lcm(freq[0], freq[1]), freq[2]);
-    cout<<"LCM("<<freq[0]<<", "<<freq[1]<<", "<<freq[2]<<") = "<<max_chunks<<endl;
+    max_chunks = lcm(freq);
+    cout<<"LCM = "<<max_chunks<<endl;
 
-    num_chunks[0] = max_chunks/freq[0];
-    num_chunks[1] = max_chunks/freq[1];
-    num_chunks[2] = max_chunks/freq[2];
-    cout<<"number_chunks(A) = max_chunks / rel_freq(A) = "<<max_chunks<<" / "<<freq[0]<<" = "<<num_chunks[0]<<endl;
-    cout<<"number_chunks(B) = max_chunks / rel_freq(A) = "<<max_chunks<<" / "<<freq[1]<<" = "<<num_chunks[1]<<endl;
-    cout<<"number_chunks(C) = max_chunks / rel_freq(A) = "<<max_chunks<<" / "<<freq[2]<<" = "<<num_chunks[2]<<"\n"<<endl;
-
+	for(int i = 0; i < NUM_DISKS; ++i)
+    {
+		num_chunks[i] = max_chunks/freq[i];
+		cout<<"number_chunks(" << diskName[i] << ") = max_chunks / rel_freq(" << diskName[i] << ") = "<<max_chunks<<" / "<<freq[i]<<" = "<<num_chunks[i]<<endl;
+	}
+		
     for(int index = 0; index<NUM_DISKS; index++){
        
         while( (count[index] % num_chunks[index])!= 0 ){
