@@ -2,36 +2,86 @@
 #include <list>
 #include <map>
 #include <limits>
+#include <vector>
+#include <sstream>
+#include <fstream>
 
 using namespace std;
 
-int main(){
-    const int NUM_DISKS = 2;
+int main(int argc, char* argv[]){
+    int NUM_DISKS = 0;
 
-    //up to how many items total can be in cache
+    //input stream from file
+	ifstream in(argv[1]);
+	
+	//up to how many items total can be in cache
     //Chris, would you figure out what if there are repeat items in cache
     //doesn't matter which disks the items are from
-    const int CACHE_LIMIT = 2;
+    int CACHE_LIMIT = atoi(argv[2]);
 
     //a constant used in formula
     const double C = 0.5;
 
     //dtat items in each disk
-    string disk[NUM_DISKS] = {"ABC", "DEFGHIJKL"};
+    vector<string> disk; // {"ABC", "DEFGHIJKL"};
 
-    string broadcast = "ACDAEBBFABlGDHCIABCJEDFKBAL";
+    string broadcast;
+	//read broadcast in from input file
+	in >> broadcast;
+	
+	cout << "The broadcast schedule is " << broadcast << endl << endl;
 
-    int frequency[NUM_DISKS] = {3, 1};
+    vector<int> frequency; //{3, 1};
 
-    string diskName[NUM_DISKS] = {"Disk_FAST", "Disk_SLOW"};
+    vector<string> diskName; // {"Disk_FAST", "Disk_SLOW"};
+	
+	//lists to store what's in the cache
+    vector<list<char> > cached;
+	
+	//LIX value for the last item of each disk's cach list
+    vector<double> lix; // {0, 0};
 
-    //lists to store what's in the cache
-    list<char> cached[NUM_DISKS];
+	//read input from file
+	string page;
+	int freq;
+	
+	do{
+		in >> page >> freq;
+		
+		//search for the frequency to see if it is shared by other pages
+		bool found = false;
+		int i;
+		
+		for(i = 0; i < frequency.size(); ++i)
+			if(frequency[i] == freq)
+			{
+				found = true;
+				break;
+			}
+		
+		//if found, just add the page to the corresponding disk
+		if(found)
+		{
+			disk[i] = disk[i] + page;
+		}
+		else //otherwise, add a new disk for the new frequency
+		{
+			NUM_DISKS++;
+			frequency.push_back(freq);
+			disk.push_back(page);
+			lix.push_back(0);
+			
+			//just some magic to convert an integer to a string
+			stringstream ss;
+			ss << i;
+			diskName.push_back("Disk_" + ss.str());
+			
+			list<char> tempList;
+			cached.push_back(tempList);
+		}	
+	}while(!in.eof());
 
     int totalInCache = 0;
-
-    //LIX value for the last item of each disk's cach list
-    double lix[NUM_DISKS] = {0, 0};
 
     //each data item will know what its most 
     //recent pi(estimated access probability) is.
