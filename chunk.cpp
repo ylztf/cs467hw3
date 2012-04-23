@@ -158,6 +158,32 @@ int main(int argc, char* argv[]){
 				break;
 			}
     }
+	
+	// sort the disks according to access probability
+	int i, j, flag = 1;    // set flag to 1 to start first pass
+	double temp;             // holding variables
+	disk tempDisk;
+	for(i = 1; (i <= ACCESS_PROB_VALUE.size()) && flag; i++)
+	{
+		flag = 0;
+		for (j=0; j < (ACCESS_PROB_VALUE.size() -1); j++)
+		{
+			if (ACCESS_PROB_VALUE[j+1] > ACCESS_PROB_VALUE[j])      // ascending order simply changes to <
+			{ 
+				temp = ACCESS_PROB_VALUE[j];             // swap elements
+				tempDisk = disks[j];
+				
+				disks[j] = disks[j+1];
+				ACCESS_PROB_VALUE[j] = ACCESS_PROB_VALUE[j+1];
+				
+				ACCESS_PROB_VALUE[j+1] = temp;
+				disks[j+1] = tempDisk;
+				
+				flag = 1;               // indicates that a swap occurred.
+			}
+		}
+	}
+	
     //print out the contents of the disks.
     for (int index = 0; index<NUM_DISKS; index++){
         cout<<diskName[index]<<" is for items with access probability of "<<ACCESS_PROB_VALUE[index]<<endl;
